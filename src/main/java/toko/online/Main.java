@@ -1,82 +1,78 @@
 package toko.online;
 
-
+import java.awt.*;
 import java.io.IOException;
-import java.util.Date;
-import java.util.Scanner;
-import java.util.UUID;
 
-import toko.online.model.transaction;
-import toko.online.model.user;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+
 import toko.online.view.ProductView;
 import toko.online.view.TransctionView;
 import toko.online.view.authView;
 
 
-public class Main  {
-    public static void main(String[] args) throws IOException {
-        
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("=".repeat(20) );
-        System.out.println("selamat datang di toko online");
-        System.out.println("=".repeat(20));
-        System.out.println("1. daftar");
-        System.out.println("2. lihat barang");
-        System.out.println("3. transaction");
-        System.out.println("pilih menu: ");
-        int menu = scanner.nextInt();
-        if (menu == 1) {
-            System.out.println("=".repeat(20) );
-            System.out.print("masukkan username: ");
-            String username = scanner.next();
-            System.out.print("masukkan password: ");
-            String password = scanner.next();
-            System.out.print("masukkan email: ");
-            String email = scanner.next();
-            authView auth = new authView();
-            System.out.println("=".repeat(20) );
-            user user = new user(username, password,email);
-            auth.RegisterView(user);
-            scanner.close();
-        } else if (menu == 2) {
-            System.out.println("=".repeat(20) );
-            ProductView product = new ProductView();
-            product.getProducts();
-            System.out.println("apakah anda ingin membeli barang? (y/n)");
-            String answer = scanner.next();
-            if (answer.equals("y")) {
-                System.out.println("=".repeat(20) );
-                System.out.println("masukan id product yang ingin dibeli: ");
-                int id_product = scanner.nextInt();
-                System.out.println("=".repeat(20) );
-                System.out.println("masukan qty: ");
-                int qty = scanner.nextInt();
-                System.out.println("=".repeat(20) );
-                System.out.println("masukan uang anda : ");
-                int total_amount  = scanner.nextInt();
-                System.out.println("masukan email anda : ");
-                String email = scanner.next();
-                UUID id_transaction = UUID.randomUUID();
-                Date date = new Date();
+public class Main extends JFrame {
 
-                transaction transaction = new transaction(email, id_product, id_transaction.toString(),qty,0,total_amount, date, true);
-                TransctionView transctionView = new TransctionView();
-                transctionView.buyProduct(transaction);
-            }
-            System.out.println("=".repeat(20) );
-            
-            scanner.close();
+     public Main() {
+        // Pengaturan JFrame
+        setTitle("Toko Online");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(400, 300);
+        setLayout(new BorderLayout());
+
+        // Panel Header
+        JPanel headerPanel = new JPanel();
+        JLabel welcomeLabel = new JLabel("Selamat Datang di Toko Online");
+        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerPanel.add(welcomeLabel);
+        add(headerPanel, BorderLayout.NORTH);
+
+        // Panel Menu
+        JPanel menuPanel = new JPanel(new GridLayout(3, 1, 10, 10));
+        JButton daftarButton = new JButton("1. Daftar");
+        JButton lihatBarangButton = new JButton("2. Lihat Barang");
+        JButton transaksiButton = new JButton("3. Transaksi");
+
+        menuPanel.add(daftarButton);
+        menuPanel.add(lihatBarangButton);
+        menuPanel.add(transaksiButton);
+
+        // Tambahkan Panel Menu ke JFrame
+        add(menuPanel, BorderLayout.CENTER);
+
+        // Event Listener
+        daftarButton.addActionListener(e -> showMessage(1));
+        lihatBarangButton.addActionListener(e -> showMessage(2));
+        transaksiButton.addActionListener(e -> showMessage(3));
+
+        setVisible(true);
+    }
+
+    private void showMessage(Integer menu) {
+        if (menu == 1) {
+            authView auth = new authView();
+            auth.RegisterView();
+        } else if (menu == 2) {
+            SwingUtilities.invokeLater(() -> {
+            ProductView gui = new ProductView();
+            gui.setVisible(true);
+        });
         } else if (menu == 3) {
-            System.out.println("=".repeat(20) );
-            System.out.println("masukan email: ");
-            String email = scanner.next();
-            System.out.println("=".repeat(20) );
-            TransctionView transaction = new TransctionView();
-            transaction.viewTransactions(email);
-            scanner.close();
+            SwingUtilities.invokeLater(
+                () -> {
+                    TransctionView gui = new TransctionView();
+                    gui.setVisible(true);
+                }
+            );
         }
     }
- 
+
+    public static void main(String[] args) throws IOException {
+        new Main();
+    }
     
  
 }

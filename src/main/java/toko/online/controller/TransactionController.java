@@ -12,7 +12,7 @@ import toko.online.model.transaction;
 public class TransactionController {
     Connection connection = new connentionDb().getConnection();
 
-    public void buyProduct(transaction transaction) {
+    public boolean buyProduct(transaction transaction) {
 
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT INTO transactions (id_transaction, user_email, total_price_amount, status, date) VALUES (?, ?, ?, ?, ?)");
@@ -32,31 +32,32 @@ public class TransactionController {
             datailStatement.executeUpdate();
 
 
-            System.out.println("Transaction success");
+            return true;
         } catch (SQLException e) {
             throw new RuntimeException(e.getErrorCode() + ": " + e.getMessage());
         }
     }
 
-    public void viewTransactions(String email){
+    public ResultSet viewTransactions(String email){
 
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM transactions inner join transactions_details on transactions.id_transaction = transactions_details.transaction_id inner join product on transactions_details.product_id = product.id WHERE user_email = ?");
             statement.setString(1, email);            
             ResultSet products = statement.executeQuery();
-            while (products.next()) {
-                System.out.println("");
-                System.out.println("=".repeat(80) );
-                System.out.println("Transaction ID: " + products.getString("id_transaction"));
-                System.out.println("product name: " + products.getString("name"));
-                System.out.println("jumlah product yang di beli: " + products.getInt("quantity"));
-                System.out.println("jumlah harga product: " + products.getInt("total_price_product"));
-                System.out.println("jumlah yang dibayar: " + products.getInt("total_price_amount"));
-                System.out.println("Status: " + (products.getBoolean("status") ? "Paid" : "Unpaid"));
-                System.out.println("user email: " + products.getString("user_email"));
-                System.out.println("Tanggal: " + products.getDate("date"));
-                System.out.println("=".repeat(80) );
-            }
+            // while (products.next()) {
+            //     System.out.println("");
+            //     System.out.println("=".repeat(80) );
+            //     System.out.println("Transaction ID: " + products.getString("id_transaction"));
+            //     System.out.println("product name: " + products.getString("name"));
+            //     System.out.println("jumlah product yang di beli: " + products.getInt("quantity"));
+            //     System.out.println("jumlah harga product: " + products.getInt("total_price_product"));
+            //     System.out.println("jumlah yang dibayar: " + products.getInt("total_price_amount"));
+            //     System.out.println("Status: " + (products.getBoolean("status") ? "Paid" : "Unpaid"));
+            //     System.out.println("user email: " + products.getString("user_email"));
+            //     System.out.println("Tanggal: " + products.getDate("date"));
+            //     System.out.println("=".repeat(80) );
+            // }
+            return products;
         } catch (SQLException e) {
             throw new RuntimeException(e.getErrorCode() + ": " + e.getMessage());
         }
