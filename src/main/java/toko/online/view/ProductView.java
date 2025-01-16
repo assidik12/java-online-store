@@ -10,6 +10,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -33,6 +34,8 @@ public class ProductView extends JFrame {
        private JTextField fieldQuantity;
        private JTextField fieldEmail;
        private JTextField buyyerField;
+       private String[] paymentMethodOptions = {"BCA", "Cash", "alfamart", "Mandiri"};
+       private JComboBox<String> payment_method;
         
         public static Product getProductsById(int id) {
         Product product = productController.findProductById(id);
@@ -75,6 +78,8 @@ public class ProductView extends JFrame {
         fieldEmail= new JTextField();
         buyyerField = new JTextField();
 
+        payment_method = new JComboBox<>(paymentMethodOptions);
+
         transactionPanel.setLayout(new BoxLayout(transactionPanel, BoxLayout.Y_AXIS));
 
         transactionPanel.add(new JLabel("ID Barang:"));
@@ -94,6 +99,11 @@ public class ProductView extends JFrame {
 
         transactionPanel.add(new JLabel("Masukan jumlah uang:"));
         transactionPanel.add(buyyerField);
+
+        transactionPanel.add(Box.createVerticalStrut(5)); // Jarak antara komponen
+
+        transactionPanel.add(new JLabel("Metode Pembayaran:"));
+        transactionPanel.add(payment_method);
 
 
         JButton saveTransactionButton = new JButton("Simpan Transaksi");
@@ -128,7 +138,7 @@ public class ProductView extends JFrame {
             };
             int total_price_product = (int) product.getPrice() * quantity;
 
-            if (total_price_product >= Integer.parseInt(buyyerField.getText())) {
+            if (total_price_product >= Integer.parseInt(buyyerField.getText())-1) {
                 JOptionPane.showMessageDialog(this, "Kuantitas tidak boleh negatif!", "Kesalahan", JOptionPane.ERROR_MESSAGE);
             }
 
@@ -139,7 +149,7 @@ public class ProductView extends JFrame {
             }
 
             // Simpan transaksi ke database
-            transaction transaction = new transaction(email, productId, transactionId, quantity, total_price_product, Integer.parseInt(buyyerField.getText()), new java.util.Date(), true);
+            transaction transaction = new transaction(email, productId, transactionId, quantity, total_price_product, Integer.parseInt(buyyerField.getText()), new java.util.Date(), true, payment_method.getSelectedItem().toString());
             TransactionController transactionController = new TransactionController();
             if (transactionController.buyProduct(transaction)) {                
                 // Proses simpan transaksi (contoh sederhana)

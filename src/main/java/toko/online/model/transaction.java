@@ -6,13 +6,14 @@ public class transaction {
     private String email;
     private int id_product;
     private String transactionId;
+    private String payment_method;
     private int qty;
     private int total_price_product;
     private int total_price_amount;
     private Date date;
     private boolean status;
 
-    public transaction(String email, int id_product, String transactionId, int qty, int total_price_product, int total_price_amount, Date date, boolean status) {
+    public transaction(String email, int id_product, String transactionId, int qty, int total_price_product, int total_price_amount, Date date, boolean status, String payment_method) {
         this.transactionId = transactionId;
         this.total_price_amount = total_price_amount;
         this.qty = qty;
@@ -21,7 +22,7 @@ public class transaction {
         this.status = status;
         this.email = email;
         this.id_product = id_product;
-
+        this.payment_method = payment_method;
     }
 
 
@@ -39,6 +40,14 @@ public class transaction {
 
     public void setTransactionId(String transactionId) {
         this.transactionId = transactionId;
+    }
+
+    public String getPayment_method() {
+        return payment_method;
+    }
+    
+    public void setPayment_method(String payment_method) {
+        this.payment_method = payment_method;
     }
 
     public int getTotal_price_amount() {

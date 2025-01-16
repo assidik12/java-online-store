@@ -36,6 +36,12 @@ public class Main extends JFrame {
         JButton lihatBarangButton = new JButton("2. Lihat Barang");
         JButton transaksiButton = new JButton("3. Transaksi");
 
+        daftarButton.setFont(new Font("Arial", Font.BOLD, 14));
+        lihatBarangButton.setFont(new Font("Arial", Font.BOLD, 14));
+        transaksiButton.setFont(new Font("Arial", Font.BOLD, 14));
+
+        daftarButton.setSize(20, 40);
+
         menuPanel.add(daftarButton);
         menuPanel.add(lihatBarangButton);
         menuPanel.add(transaksiButton);

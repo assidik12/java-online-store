@@ -47,8 +47,10 @@ public class TransctionView extends JFrame {
         setSize(800, 600);
         setLayout(new BorderLayout());
 
+        
         // Kolom tabel
-        String[] columnNames = {"ID Transaksi", "Nama Produk", "Kuantitas", "Total Harga Produk", "Total Dibayar", "Status", "Email Pengguna", "Tanggal"};
+        String[] columnNames = {"ID Transaksi", "Nama Produk", "Kuantitas", "Total Harga Produk", "Total Dibayar", "Status", "Email Pengguna", "Tanggal", "Metode Pembayaran"};
+        
 
         // Model tabel
         tableModel = new DefaultTableModel(columnNames, 0);
@@ -62,13 +64,11 @@ public class TransctionView extends JFrame {
         JPanel inputPanel = new JPanel(new FlowLayout());
         JLabel emailLabel = new JLabel("Email Pengguna:");
         emailField = new JTextField(20);
-        // JButton searchButton = new JButton("Cari");
 
-       
-        inputPanel.add(emailLabel);
-        inputPanel.add(emailField);
-        // inputPanel.add(searchButton);
+              inputPanel.add(emailLabel);
+              inputPanel.add(emailField);
 
+  
         add(inputPanel, BorderLayout.NORTH);
 
         // Tombol untuk menampilkan semua transaksi
@@ -107,7 +107,8 @@ public class TransctionView extends JFrame {
                 String.format("%,.0f", (double) transactions.getInt("total_price_amount")).replace(',', '.'),
                 transactions.getBoolean("status") ? "Paid" : "Unpaid",
                 transactions.getString("user_email"),
-                transactions.getDate("date")
+                transactions.getDate("date"),
+                transactions.getString("payment_method")
             };
             tableModel.addRow(row);
         }
