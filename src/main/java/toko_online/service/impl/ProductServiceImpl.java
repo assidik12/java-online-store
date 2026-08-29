@@ -3,6 +3,7 @@ package toko_online.service.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import toko_online.exception.ResourceNotFoundException;
 import toko_online.exception.ValidationException;
@@ -29,6 +30,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponse> getAllProducts() {
         log.info("Mengambil semua data produk dari database...");
         List<Product> products = productRepository.findAll();
@@ -39,6 +41,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductResponse getProductById(Integer id) {
         log.info("Mencari produk dengan ID: {}", id);
         if (id == null || id <= 0) {
@@ -54,6 +57,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public ProductResponse createProduct(ProductRequest request) {
         log.info("Membuat produk baru: {}", request != null ? request.getName() : "null");
         if (request == null) {
@@ -80,6 +84,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public ProductResponse updateProduct(Integer id, UpdateProductRequest request) {
         log.info("Mengupdate produk dengan ID: {} menjadi: {}", id, request != null ? request.getName() : "null");
         if (request == null) {
@@ -109,6 +114,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public boolean updateProductStock(Integer id, Integer newStock) {
         log.info("Mengupdate stok produk ID: {} menjadi: {}", id, newStock);
         if (id == null || id <= 0) {
@@ -129,6 +135,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public boolean deleteProduct(Integer id) {
         log.info("Menghapus produk dengan ID: {}", id);
         if (id == null || id <= 0) {

@@ -74,8 +74,8 @@ public class TransactionServiceImpl implements TransactionService {
 
         PaymentMethod paymentMethod = request.getPaymentMethod() != null ? request.getPaymentMethod() : PaymentMethod.CASH;
 
-        // 1. Ambil & Kunci Produk
-        Product product = productRepository.findById(request.getProductId())
+        // 1. Ambil & Kunci Produk (SELECT ... FOR UPDATE untuk mencegah race condition stok)
+        Product product = productRepository.findByIdForUpdate(request.getProductId())
                 .orElseThrow(() -> {
                     log.warn("Transaksi gagal: Produk ID {} tidak ditemukan.", request.getProductId());
                     return new ResourceNotFoundException("Produk dengan ID " + request.getProductId() + " tidak ditemukan.");

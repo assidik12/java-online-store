@@ -12,6 +12,12 @@ public interface ProductRepository {
 
     Optional<Product> findById(Integer id);
 
+    /**
+     * Mengambil produk berdasarkan ID dengan pessimistic lock (SELECT ... FOR UPDATE).
+     * Digunakan dalam transaksi untuk mencegah race condition pada stok.
+     */
+    Optional<Product> findByIdForUpdate(Integer id);
+
     List<Product> findAll();
 
     boolean updateStock(Integer id, Integer newStock);

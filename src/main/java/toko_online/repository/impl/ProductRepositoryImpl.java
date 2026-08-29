@@ -89,6 +89,25 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public Optional<Product> findByIdForUpdate(Integer id) {
+        String sql = "SELECT * FROM product WHERE id = ? FOR UPDATE";
+        Connection conn = DataSourceUtils.getConnection(dataSource);
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToProduct(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException("Gagal mengunci produk untuk update: " + e.getMessage(), e);
+        } finally {
+            DataSourceUtils.releaseConnection(conn, dataSource);
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public List<Product> findAll() {
         List<Product> list = new ArrayList<>();
         String sql = "SELECT * FROM product";

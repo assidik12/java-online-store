@@ -5,7 +5,9 @@ import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import toko_online.exception.DatabaseException;
 import toko_online.exception.UnauthorizedException;
 import toko_online.exception.ValidationException;
 import toko_online.model.dto.request.LoginRequest;
@@ -74,6 +76,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public UserResponse register(RegisterRequest request) {
         log.info("Menerima permintaan registrasi user baru: {}", request != null ? request.getUsername() : "null");
 
@@ -115,7 +118,16 @@ public class AuthServiceImpl implements AuthService {
                 request.getAddress(),
                 request.getPosCode());
 
-        User savedUser = userRepository.save(user);
+        User savedUser;
+        try {
+            savedUser = userRepository.save(user);
+        } catch (DatabaseException e) {
+            if (e.getMessage() != null && e.getMessage().contains("Duplicate entry")) {
+                log.warn("Registrasi gagal: Username atau email sudah terdaftar (race condition detected).");
+                throw new ValidationException("Username atau email sudah terdaftar.");
+            }
+            throw e;
+        }
         log.info("User baru berhasil didaftarkan: {} (ID: {})", savedUser.getUsername(), savedUser.getId());
 
         return new UserResponse(
