@@ -1,15 +1,18 @@
 <div align="center">
 
-# 🛒 Java Online Store & Point of Sales (POS)
+# 🏪 RetailFlow
 
-**Enterprise-Grade Desktop Application built with Java 17, Clean Architecture, and SOLID Principles**
+**Enterprise-Grade RESTful API for Online Store & Point of Sales — Java 17, Spring Boot 3, Clean Architecture, RBAC + JWT**
 
 [![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Build-Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 [![MySQL](https://img.shields.io/badge/Database-MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Security](https://img.shields.io/badge/Security-Spring%20Security%20%2B%20JWT-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white)](https://spring.io/projects/spring-security)
+[![Flyway](https://img.shields.io/badge/Migration-Flyway-CC0200?style=for-the-badge)](https://flywaydb.org/)
 [![HikariCP](https://img.shields.io/badge/Pool-HikariCP-4CAF50?style=for-the-badge)](https://github.com/brettwooldridge/HikariCP)
-[![Security](https://img.shields.io/badge/Security-BCrypt-blueviolet?style=for-the-badge)](https://github.com/patrickfav/bcrypt)
-[![Architecture](https://img.shields.io/badge/Design-Clean%20Architecture-00599C?style=for-the-badge)](#arsitektur-sistem)
+[![OpenAPI](https://img.shields.io/badge/Docs-OpenAPI%203-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://springdoc.org/)
+[![Architecture](https://img.shields.io/badge/Design-Clean%20Architecture-00599C?style=for-the-badge)](#-arsitektur-sistem)
 
 </div>
 
@@ -17,132 +20,186 @@
 
 ## 📖 Ringkasan Proyek (Overview)
 
-**Java Online Store** adalah aplikasi Point of Sales (POS) dan e-commerce berbasis desktop yang dirancang dengan standar arsitektur perangkat lunak modern (**Clean Architecture & SOLID Principles**). 
+**RetailFlow** adalah RESTful API untuk aplikasi **Point of Sales (POS) & e-commerce** yang dirancang dengan standar arsitektur enterprise modern: **Clean Architecture, SOLID Principles, Spring Boot 3, Spring Security dengan JWT, dan RBAC (Role-Based Access Control)**.
 
-Proyek ini telah direfaktorisasi dari arsitektur monolitik konvensional menjadi sistem berlapis berbasis **Interface Abstraction**, di mana setiap layer (Presentation, Controller, Service, Repository, Model, Config) memiliki tanggung jawab yang terisolasi (*Separation of Concerns*). Hal ini membuat codebase sangat modular, mudah diuji (*testable*), andal (*reliable*), dan siap untuk diekstensi menjadi RESTful Web API di masa mendatang.
+Sistem menyediakan endpoint untuk registrasi & login (JWT), katalog produk, transaksi pembelian, serta kontrol akses berbasis peran (**USER** & **ADMIN**). Dokumentasi API tersedia secara interaktif melalui **Swagger UI** (OpenAPI 3).
+
+Arsitektur berlapis dengan **Interface Abstraction** memisahkan Presentation (Controller), Business Logic (Service), dan Data Access (Repository) — sehingga *testable*, *maintainable*, dan siap *scale* secara horizontal.
 
 ---
 
 ## 🏛️ Arsitektur Sistem (Clean Architecture)
 
-Aplikasi menerapkan pola arsitektur **Dependency Inversion** dan **Interface Segregation**:
-
 ```mermaid
 graph TD
-    UI[Swing Presentation Layer / View] -->|Mengirim DTO Request| CTRL[Controller Layer]
-    CTRL -->|Mengembalikan ApiResponse DTO| UI
-    CTRL -->|Memanggil Abstraksi Interface| SVC[Service Layer Interface]
+    CLIENT[Client / SPA / Mobile / Swagger UI] -->|HTTPS + JWT| FILTER[JwtAuthenticationFilter]
+    FILTER -->|SecurityContext| SEC[Spring Security + RBAC]
+    SEC --> CTRL[Controller Layer]
+    CTRL -->|Mengembalikan ApiResponse| CLIENT
+    CTRL -->|Memanggil Abstraksi| SVC[Service Layer Interface]
     SVC -.->|Diterapkan oleh| SVC_IMPL[Service Layer Implementation]
-    SVC_IMPL -->|Validasi & BCrypt & Atomic Transaction| SVC_IMPL
-    SVC_IMPL -->|Memanggil Abstraksi Interface| REPO[Repository Layer Interface]
+    SVC_IMPL -->|BCrypt / JWT / Validasi| SVC_IMPL
+    SVC_IMPL -->|Memanggil Abstraksi| REPO[Repository Layer Interface]
     REPO -.->|Diterapkan oleh| REPO_IMPL[Repository Layer Implementation]
-    REPO_IMPL -->|HikariCP Connection Pool & SQL Queries| DB[(MySQL Database)]
+    REPO_IMPL -->|HikariCP + Parameterized SQL| DB[(MySQL via Flyway)]
 ```
 
-### 🌟 Rekayasa Perangkat Lunak Utama (Key Highlights)
+### 🌟 Key Engineering Highlights
 
-1. **Abstraksi Berbasis Interface (DIP & ISP)**:
-   - Controller tidak terikat langsung dengan implementasi konkret, melainkan hanya bergantung pada interface `AuthService`, `ProductService`, dan `TransactionService`.
-   - Service berkomunikasi dengan database melalui interface `UserRepository`, `ProductRepository`, `TransactionRepository`, dan `TransactionDetailRepository`.
-2. **Manajemen Transaksi Atomik (ACID Compliant)**:
-   - Proses checkout transaksi mengeksekusi validasi stok, pengurangan stok barang, pencatatan transaksi, dan penyimpanan item detail secara **atomik** dengan transaksi database (`setAutoCommit(false)`, `commit()`, `rollback()`) untuk mencegah inkonsistensi data.
-3. **Koneksi Database Berkinerja Tinggi (HikariCP Pooling)**:
-   - Menggantikan koneksi manual dengan `HikariDataSource` pool singleton yang mengelola siklus hidup koneksi secara efisien dan mencegah kebocoran resource (*connection leaks*) dengan standar `try-with-resources`.
-4. **Keamanan Data & Enkripsi Password**:
-   - Password pengguna di-hash menggunakan algoritma **BCrypt** dengan *work factor (salt rounds)* 12 sebelum disimpan ke basis data.
-   - Penanganan autentikasi login aman terhadap serangan *User Enumeration*.
-5. **Data Transfer Object (DTO) Pattern**:
-   - Memisahkan data transport/payload (`model.dto.request` dan `model.dto.response`) dari domain entity database (`model.entity`), memastikan keamanan struktur database.
-6. **Hierarki Custom Exception**:
-   - Penanganan error terstruktur dengan exception spesifik: `ValidationException`, `UnauthorizedException`, `ResourceNotFoundException`, `InsufficientStockException`, dan `DatabaseException`.
+1. **Spring Security 6 + JWT (jjwt 0.12)**
+   - Stateless `SecurityFilterChain` dengan custom `JwtAuthenticationFilter` (Once-per-Request).
+   - HS256 signed JWT; **access token (1 jam)** + **refresh token (7 hari)** dengan `jti`, `iss`, `exp`, `sub` dan custom claims (`username`, `email`, `role`).
+   - BCrypt `PasswordEncoder` (strength 12) untuk hashing password.
+2. **Role-Based Access Control (RBAC)**
+   - **USER** → read katalog publik, buat transaksi.
+   - **ADMIN** → CRUD produk, lihat seluruh transaksi, listing user.
+   - Enforcement di URL level (`SecurityFilterChain`) **+** method level (`@PreAuthorize`).
+3. **Clean Architecture & DIP/ISP**
+   - Controller → Service interface → Service impl → Repository interface → Repository impl.
+   - Domain entity terpisah dari DTO request/response (tidak bocor ke API).
+4. **Transaksi DB Atomik (ACID)**
+   - Checkout menggunakan `setAutoCommit(false) / commit() / rollback()` di layer service — anti race condition.
+5. **HikariCP Connection Pooling**
+   - `try-with-resources` + `DataSourceUtils` — anti connection leak.
+6. **Flyway Migration**
+   - `V1__create_schema.sql` (versioned) + `R__init_data.sql` (repeatable seed).
+7. **OpenAPI 3 / Swagger UI**
+   - springdoc-openapi 2.6 — interaktif di `/swagger-ui.html`, JSON di `/api/docs`.
+8. **Global Exception Handler**
+   - `MethodArgumentNotValidException`, custom `AppException` family, Spring Security `AccessDenied` & `AuthenticationException` — semua response JSON konsisten lewat `ApiResponse<T>`.
+9. **DTO Pattern + Validation**
+   - Jakarta Bean Validation (`@NotBlank`, `@Email`, `@Size`) di request DTO, dan trim/sanitasi di service.
+
+---
+
+## 🔐 Model Keamanan (Security Model)
+
+| Aspek | Implementasi |
+| :--- | :--- |
+| Autentikasi | JWT (HS256) — `Authorization: Bearer <token>` |
+| Password Storage | BCrypt (strength 12) |
+| Session | Stateless (tidak ada HttpSession) |
+| CSRF | Disabled (karena stateless + JWT) |
+| Authorization | URL-based (`SecurityFilterChain`) + method-based (`@PreAuthorize`) |
+| Token Claims | `sub=userId`, `iss=app`, `jti`, `iat`, `exp`, `role`, `username`, `email` |
+| Refresh Token | Stateless; rotation via `POST /api/v1/auth/refresh` |
+| Error Response | JSON `ApiResponse{success, message, data}` — 401/403 terstandarisasi |
+
+**Role Matrix:**
+
+| Endpoint | USER | ADMIN | Public |
+| :--- | :---: | :---: | :---: |
+| `POST /api/v1/auth/register` | — | — | ✅ |
+| `POST /api/v1/auth/login` | — | — | ✅ |
+| `POST /api/v1/auth/refresh` | ✅ | ✅ | — |
+| `GET /api/v1/products/**` | ✅ | ✅ | ✅ |
+| `POST/PUT/PATCH/DELETE /api/v1/products/**` | ❌ | ✅ | ❌ |
+| `POST /api/v1/transactions` | ✅ | ✅ | ❌ |
+| `GET /api/v1/transactions`, `/details` | ❌ | ✅ | ❌ |
+| `GET /api/v1/users/me` | ✅ | ✅ | ❌ |
+| `GET /api/v1/users` | ❌ | ✅ | ❌ |
 
 ---
 
 ## 📁 Struktur Proyek (Directory Structure)
 
 ```text
-src/main/java/
+src/main/
+├── java/toko_online/
+│   ├── TokoOnlineApplication.java            # Spring Boot entry point
+│   │
+│   ├── config/
+│   │   └── OpenApiConfig.java                 # OpenAPI 3 / Swagger UI
+│   │
+│   ├── controller/                            # HTTP Layer (REST Endpoints)
+│   │   ├── AuthController.java                # /api/v1/auth/{register,login,refresh}
+│   │   ├── ProductController.java             # /api/v1/products
+│   │   ├── TransactionController.java         # /api/v1/transactions
+│   │   └── UserController.java                # /api/v1/users/{me,}
+│   │
+│   ├── security/                              # Spring Security + JWT
+│   │   ├── SecurityConfig.java                # SecurityFilterChain + RBAC rules
+│   │   ├── JwtService.java                    # Generate / parse / validate JWT
+│   │   ├── JwtAuthenticationFilter.java       # OncePerRequestFilter
+│   │   ├── AppUserDetailsService.java         # UserDetailsService adapter
+│   │   ├── AppUserPrincipal.java              # UserDetails implementation
+│   │   ├── SecurityErrorHandlers.java         # 401/403 JSON entry points
+│   │   └── CurrentUser.java                   # SecurityContext helper
+│   │
+│   ├── service/                               # Business Logic (Interface Abstraction)
+│   │   ├── AuthService.java
+│   │   ├── ProductService.java
+│   │   ├── TransactionService.java
+│   │   └── impl/
+│   │       ├── AuthServiceImpl.java
+│   │       ├── ProductServiceImpl.java
+│   │       └── TransactionServiceImpl.java
+│   │
+│   ├── repository/                            # Data Access Layer
+│   │   ├── UserRepository.java
+│   │   ├── ProductRepository.java
+│   │   ├── TransactionRepository.java
+│   │   ├── TransactionDetailRepository.java
+│   │   └── impl/
+│   │       ├── UserRepositoryImpl.java
+│   │       ├── ProductRepositoryImpl.java
+│   │       ├── TransactionRepositoryImpl.java
+│   │       └── TransactionDetailRepositoryImpl.java
+│   │
+│   ├── model/
+│   │   ├── entity/                            # Domain Entities
+│   │   │   ├── User.java
+│   │   │   ├── Product.java
+│   │   │   ├── Transaction.java
+│   │   │   └── TransactionDetail.java
+│   │   ├── dto/
+│   │   │   ├── request/                       # Request DTOs (Jakarta Validation)
+│   │   │   │   ├── LoginRequest.java
+│   │   │   │   ├── RegisterRequest.java
+│   │   │   │   ├── ProductRequest.java
+│   │   │   │   ├── UpdateProductRequest.java
+│   │   │   │   └── TransactionRequest.java
+│   │   │   └── response/                      # Response DTOs
+│   │   │       ├── ApiResponse.java           # Generic wrapper
+│   │   │       ├── LoginResponse.java         # + accessToken/refreshToken
+│   │   │       ├── UserResponse.java
+│   │   │       ├── ProductResponse.java
+│   │   │       ├── TransactionResponse.java
+│   │   │       └── TransactionDetailResponse.java
+│   │   └── enums/
+│   │       ├── Role.java                      # USER, ADMIN
+│   │       ├── TransactionStatus.java
+│   │       └── PaymentMethod.java
+│   │
+│   └── exception/                             # Custom Exception Hierarchy
+│       ├── AppException.java
+│       ├── DatabaseException.java
+│       ├── InsufficientStockException.java
+│       ├── ResourceNotFoundException.java
+│       ├── UnauthorizedException.java
+│       ├── ValidationException.java
+│       └── GlobalExceptionHandler.java        # @RestControllerAdvice
 │
-├── config/
-│   └── DatabaseConfig.java                  # Konfigurasi HikariCP Connection Pool & DataSource
-│
-├── controller/                              # Layer Pengendali (Request/Response Orchestrator)
-│   ├── AuthController.java                  # Controller Registrasi & Login
-│   ├── ProductController.java               # Controller Katalog & Stok Produk
-│   └── TransactionController.java           # Controller Transaksi & Kasir
-│
-├── service/                                 # Layer Business Logic (Interface Abstraction)
-│   ├── AuthService.java                     # Kontrak Service Autentikasi
-│   ├── ProductService.java                  # Kontrak Service Manajemen Produk
-│   ├── TransactionService.java              # Kontrak Service Checkout & Transaksi
-│   └── impl/                                # Implementasi Logika Bisnis & Transaksi Atomik
-│       ├── AuthServiceImpl.java
-│       ├── ProductServiceImpl.java
-│       └── TransactionServiceImpl.java
-│
-├── repository/                              # Data Access Layer / DAO (Interface Abstraction)
-│   ├── UserRepository.java                  # Kontrak Akses Data User
-│   ├── ProductRepository.java               # Kontrak Akses Data Produk & Stok
-│   ├── TransactionRepository.java           # Kontrak Akses Data Transaksi
-│   ├── TransactionDetailRepository.java     # Kontrak Akses Data Detail Transaksi
-│   └── impl/                                # Implementasi JDBC Parameterized Query
-│       ├── UserRepositoryImpl.java
-│       ├── ProductRepositoryImpl.java
-│       ├── TransactionRepositoryImpl.java
-│       └── TransactionDetailRepositoryImpl.java
-│
-├── model/
-│   ├── entity/                              # JPA / Domain Entities
-│   │   ├── User.java
-│   │   ├── Product.java
-│   │   ├── Transaction.java
-│   │   └── TransactionDetail.java
-│   ├── dto/                                 # Data Transfer Objects (Payloads)
-│   │   ├── request/                         # Request DTOs
-│   │   │   ├── LoginRequest.java
-│   │   │   ├── RegisterRequest.java
-│   │   │   ├── ProductRequest.java
-│   │   │   └── TransactionRequest.java
-│   │   └── response/                        # Response DTOs
-│   │       ├── ApiResponse.java             # Generic Wrapper (Success/Error format)
-│   │       ├── LoginResponse.java
-│   │       ├── UserResponse.java
-│   │       ├── ProductResponse.java
-│   │       ├── TransactionResponse.java
-│   │       └── TransactionDetailResponse.java
-│   └── enums/                               # Tipe Data Enum Aman (Type-safe)
-│       ├── Role.java                        # USER, ADMIN
-│       ├── TransactionStatus.java           # PENDING, PAID, CANCELLED, FAILED
-│       └── PaymentMethod.java               # BCA, CASH, ALFAMART, MANDIRI
-│
-├── exception/                               # Custom Exception Hierarchy
-│   ├── AppException.java                    # Base Application Exception
-│   ├── DatabaseException.java               # Wrapper SQLException
-│   ├── InsufficientStockException.java      # Error Stok Tidak Cukup
-│   ├── ResourceNotFoundException.java       # Error Data Tidak Ditemukan
-│   ├── UnauthorizedException.java           # Error Autentikasi / Password Salah
-│   └── ValidationException.java             # Error Validasi Input
-│
-├── view/                                    # UI Presentation Layer (Java Swing)
-│   ├── authView.java                        # GUI Form Registrasi & Login
-│   ├── ProductView.java                     # GUI Katalog Produk & Form Kasir Pembelian
-│   └── TransctionView.java                  # GUI Histori Transaksi & Filter
-│
-└── Main.java                                # Entry Point Aplikasi
+└── resources/
+    ├── application.properties                 # Spring config (DB, JWT, HikariCP, Springdoc)
+    ├── logback.xml
+    └── db/
+        ├── migration/
+        │   └── V1__create_schema.sql
+        └── seed/
+            └── R__init_data.sql
 ```
 
 ---
 
 ## 🗄️ Skema Basis Data (Database Schema)
 
-Aplikasi menggunakan database relational **MySQL** (`java_toko_online`) dengan tabel-tabel berikut:
-
 ```sql
-CREATE DATABASE IF NOT EXISTS java_toko_online;
-USE java_toko_online;
+CREATE DATABASE IF NOT EXISTS `java_toko_online`
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `java_toko_online`;
 
--- Tabel Pengguna (User)
-CREATE TABLE IF NOT EXISTS `user` (
+CREATE TABLE `user` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `username` VARCHAR(50) NOT NULL UNIQUE,
     `password` VARCHAR(255) NOT NULL,
@@ -150,118 +207,247 @@ CREATE TABLE IF NOT EXISTS `user` (
     `role` VARCHAR(20) DEFAULT 'user',
     `phone_number` VARCHAR(20),
     `address` TEXT,
-    `pos_code` VARCHAR(10)
-);
+    `pos_code` VARCHAR(10),
+    INDEX `idx_user_email` (`email`),
+    INDEX `idx_user_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Tabel Produk (Product)
-CREATE TABLE IF NOT EXISTS `product` (
+CREATE TABLE `product` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
     `price` DOUBLE NOT NULL,
-    `stock` INT NOT NULL DEFAULT 0
-);
+    `stock` INT NOT NULL DEFAULT 0,
+    INDEX `idx_product_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Tabel Transaksi (Transactions)
-CREATE TABLE IF NOT EXISTS `transactions` (
+CREATE TABLE `transactions` (
     `id_transaction` VARCHAR(64) PRIMARY KEY,
     `user_email` VARCHAR(100) NOT NULL,
     `total_price_amount` INT NOT NULL,
     `status` BOOLEAN DEFAULT TRUE,
     `date` DATE NOT NULL,
-    `payment_method` VARCHAR(50) NOT NULL
-);
+    `payment_method` VARCHAR(50) NOT NULL,
+    INDEX `idx_tx_user_email` (`user_email`),
+    INDEX `idx_tx_date` (`date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Tabel Detail Transaksi (Transactions Details)
-CREATE TABLE IF NOT EXISTS `transactions_details` (
+CREATE TABLE `transactions_details` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `transaction_id` VARCHAR(64) NOT NULL,
     `product_id` INT NOT NULL,
     `total_price_product` INT NOT NULL,
     `quantity` INT NOT NULL,
-    FOREIGN KEY (`transaction_id`) REFERENCES `transactions`(`id_transaction`) ON DELETE CASCADE,
-    FOREIGN KEY (`product_id`) REFERENCES `product`(`id`)
-);
+    CONSTRAINT `fk_tx_details_transaction`
+        FOREIGN KEY (`transaction_id`) REFERENCES `transactions`(`id_transaction`)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT `fk_tx_details_product`
+        FOREIGN KEY (`product_id`) REFERENCES `product`(`id`)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX `idx_tx_details_tx_id` (`transaction_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ---
 
-## 🛠️ Teknologi & Library yang Digunakan
+## 🛠️ Teknologi & Library
 
 | Komponen | Teknologi / Library | Versi | Deskripsi |
 | :--- | :--- | :--- | :--- |
-| **Language** | Java Development Kit (JDK) | 17 LTS | Core pemrograman berorientasi objek modern |
-| **Build Tool** | Apache Maven | 3.x | Manajemen dependensi dan siklus hidup kompilasi |
-| **Database** | MySQL | 8.0+ | Relational Database Management System |
-| **Connection Pool** | HikariCP | 4.0.2 | High-performance JDBC connection pool |
-| **Driver JDBC** | MySQL Connector/J | 8.0.33 | Java Database Connectivity driver |
-| **Security** | BCrypt (Favre-lib) | 0.10.2 | Enkripsi hashing password adaptif |
-| **Data Parsing** | Jackson Databind | 2.17.1 | Serialisasi / Deserialisasi data DTO |
-| **UI Framework** | Java Swing & AWT | Bawaan JDK | Graphical User Interface desktop |
+| **Language** | Java JDK | 17 LTS | Bahasa pemrograman inti |
+| **Framework** | Spring Boot | 3.3.2 | Web, Validation, JDBC, Security |
+| **Build Tool** | Apache Maven | 3.x | Dependency & build lifecycle |
+| **Database** | MySQL | 8.0+ | RDBMS |
+| **Migration** | Flyway (core + mysql) | bundled | Versioned SQL schema |
+| **Connection Pool** | HikariCP | bundled (Spring Boot) | High-perf JDBC pool |
+| **Driver JDBC** | MySQL Connector/J | 8.x | JDBC driver |
+| **Security** | Spring Security | 6.x | Auth & RBAC |
+| **JWT** | jjwt (api, impl, jackson) | 0.12.6 | HS256 token generation |
+| **Password** | BCrypt (Favre-lib) | 0.10.2 | Adaptive password hashing |
+| **OpenAPI** | springdoc-openapi-starter-webmvc-ui | 2.6.0 | Swagger UI / OpenAPI 3 |
+| **JSON** | Jackson | bundled | Serialization DTO ↔ JSON |
+| **Logging** | SLF4J + Logback | bundled | Structured logging |
+| **Testing** | Spring Boot Test | bundled | Unit & integration test |
 
 ---
 
-## 🚀 Panduan Menjalankan Aplikasi (Getting Started)
+## 🚀 Panduan Menjalankan (Getting Started)
 
-### 1. Prasyarat (Prerequisites)
-- [Java Development Kit (JDK 17 atau lebih baru)](https://adoptium.net/)
-- [MySQL Server & MySQL Workbench / phpMyAdmin / XAMPP](https://www.mysql.com/)
+### 1. Prasyarat
+- [JDK 17+](https://adoptium.net/)
+- [MySQL 8+](https://dev.mysql.com/downloads/) (atau XAMPP/MariaDB)
+- [Maven 3.x](https://maven.apache.org/)
 
-### 2. Konfigurasi Basis Data
-1. Jalankan MySQL Server Anda.
-2. Buat database dan tabel menggunakan script SQL di atas (atau import skrip skema).
-3. Sesuaikan username dan password database pada file [`src/main/java/config/DatabaseConfig.java`](src/main/java/config/DatabaseConfig.java) jika diperlukan:
-   ```java
-   config.setJdbcUrl("jdbc:mysql://localhost:3306/java_toko_online?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC");
-   config.setUsername("root");
-   config.setPassword("");
-   ```
+### 2. Konfigurasi Database
+Pastikan MySQL berjalan dan buat database (opsional — Flyway akan membuat otomatis):
 
-### 3. Kompilasi & Jalankan Aplikasi
-Jalankan perintah berikut pada terminal di root direktori proyek:
+```sql
+CREATE DATABASE IF NOT EXISTS java_toko_online
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Edit `src/main/resources/application.properties` jika credential berbeda:
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/java_toko_online?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+spring.datasource.username=root
+spring.datasource.password=
+```
+
+### 3. Konfigurasi JWT (Production)
+Ganti `app.jwt.secret` dengan base64 string minimal 256-bit. **Jangan commit secret production ke git** — gunakan env variable:
 
 ```bash
-# Kompilasi source code ke direktori target
+export APP_JWT_SECRET="$(openssl rand -base64 48)"
+```
+
+### 4. Build & Run
+
+```bash
+# Kompilasi
 mvn clean compile
 
+# Jalankan migrasi + seed
+mvn flyway:migrate
+
 # Jalankan aplikasi
-mvn exec:java -Dexec.mainClass="Main"
+mvn spring-boot:run
 ```
 
-*Atau jika menjalankan langsung via Java executable:*
-```powershell
-# Kompilasi
-javac -cp "target/classes;lib/*" -d "target/classes" src/main/java/**/*.java
+Server berjalan di `http://localhost:8080`.
 
-# Jalankan Main
-java -cp "target/classes;lib/*" Main
+### 5. Akses Dokumentasi API
+
+| URL | Deskripsi |
+| :--- | :--- |
+| `http://localhost:8080/swagger-ui.html` | Swagger UI (interaktif) |
+| `http://localhost:8080/api/docs` | OpenAPI 3 JSON spec |
+
+Klik **Authorize** 🔓 di Swagger UI, paste `accessToken` dari response `POST /api/v1/auth/login`, lalu coba seluruh endpoint.
+
+---
+
+## 📡 Contoh Penggunaan API (Quick Start)
+
+### 1. Register
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "kasir01",
+    "password": "Secret123!",
+    "email": "kasir01@retailflow.local",
+    "phoneNumber": "08123456789",
+    "address": "Jl. Sudirman No.1",
+    "posCode": "10110"
+  }'
+```
+
+### 2. Login → dapat JWT
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userEmail": "kasir01@retailflow.local",
+    "password": "Secret123!"
+  }'
+```
+Response:
+```json
+{
+  "success": true,
+  "message": "Login berhasil.",
+  "data": {
+    "id": 1,
+    "userEmail": "kasir01@retailflow.local",
+    "username": "kasir01",
+    "role": "USER",
+    "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 3600
+  }
+}
+```
+
+### 3. Akses endpoint protected
+```bash
+curl -X GET http://localhost:8080/api/v1/users/me \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+### 4. Buat transaksi
+```bash
+curl -X POST http://localhost:8080/api/v1/transactions \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": 1,
+    "quantity": 2,
+    "paymentMethod": "CASH"
+  }'
+```
+
+### 5. Refresh token
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Authorization: Bearer <refreshToken>"
 ```
 
 ---
 
-## 🎯 Fitur-Fitur Aplikasi
+## 🎯 Fitur RetailFlow
 
-- 🔐 **Registrasi & Autentikasi Pengguna**:
-  - Validasi ketat format data, pengecekan duplikasi username & email.
-  - Enkripsi password dengan hashing BCrypt berstandar industri.
-- 📦 **Manajemen Katalog & Stok Barang**:
-  - Menampilkan daftar produk dengan format mata uang rupiah secara realtime.
-  - Pembaruan kuantitas stok otomatis setelah transaksi berhasil.
-- 💳 **Sistem Kasir & Transaksi Pembelian**:
-  - Validasi stok dan kalkulasi total belanja serta uang kembalian (*change amount*).
-  - Berbagai pilihan metode pembayaran (*BCA, Cash, Alfamart, Mandiri*).
-  - Pencatatan transaksi secara atomik untuk mencegah *race condition* atau *data inconsistency*.
-- 📊 **Histori & Riwayat Transaksi**:
-  - Menampilkan daftar seluruh transaksi yang pernah dilakukan.
-  - Fitur pencarian dan filter transaksi berdasarkan email pelanggan.
+- 🔐 **Autentikasi JWT Stateless** — register, login, refresh token rotation.
+- 🛡️ **RBAC Two-Tier** — URL-based + method-based authorization.
+- 📦 **Katalog & Manajemen Produk** — CRUD lengkap (ADMIN), baca publik.
+- 🛒 **Transaksi Pembelian** — atomic checkout dengan validasi stok real-time.
+- 💳 **Multi Payment Method** — BCA, CASH, ALFAMART, MANDIRI.
+- 📊 **Histori & Listing Transaksi** — filter per user, ADMIN-only.
+- 🧾 **Profil & Listing User** — `/users/me` (self) dan `/users` (ADMIN).
+- 📜 **OpenAPI 3 Docs** — Swagger UI interaktif dengan tombol "Authorize".
+- 🚨 **Centralized Error Handling** — JSON konsisten untuk semua error.
+- 🗃️ **Flyway Migration** — schema versioned + repeatable seed.
 
 ---
 
-## 👤 Profil Pengembang & Portofolio
+## 🧪 Testing (Roadmap)
 
-- **Repository**: [Java Online Store](https://github.com/assidik12/java-online-store)
-- **Topik / Fokus**: *Clean Architecture, Domain-Driven Design Principles, Enterprise Java Development, Secure Coding Best Practices.*
+```bash
+mvn test
+```
+
+Rekomendasi struktur:
+- `service/` — unit test dengan Mockito (mock repository).
+- `controller/` — `@WebMvcTest` + `MockMvc` + JWT test utility.
+- `repository/` — `@JdbcTest` dengan H2/Testcontainers MySQL.
+- `integration/` — `@SpringBootTest` end-to-end flow.
 
 ---
+
+## 📈 Skalabilitas (Scalability Notes)
+
+- **Horizontal scaling** — Stateless JWT, tidak ada sticky session. Cukup tambah instance di belakang load balancer.
+- **Database** — Tambahkan read replica, pisahkan query baca/tulis.
+- **Cache** — Spring Cache + Redis untuk katalog produk & session blacklist.
+- **Async** — `@Async` + thread pool untuk email notifikasi, audit log.
+- **Observability** — Micrometer + Prometheus + Grafana; distributed tracing dengan OpenTelemetry.
+- **Security hardening** — Rate limit (Bucket4j), IP allowlist untuk `/api/docs` di production, secret manager (Vault/KMS).
+
+---
+
+## 📝 Lisensi
+
+Proyek ini menggunakan lisensi **Proprietary** — lihat `LICENSE` untuk detail.
+
+---
+
+## 👤 Pengembang
+
+- **Repository**: [RetailFlow](https://github.com/assidik12/java-online-store)
+- **Fokus**: *Clean Architecture, Domain-Driven Design, Enterprise Java, Secure Coding Best Practices, RESTful API Design.*
+
+---
+
 <div align="center">
   <sub>Dibangun dengan dedikasi pada kebersihan kode, keandalan arsitektur, dan prinsip Software Engineering modern.</sub>
 </div>
