@@ -4,6 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -78,5 +81,21 @@ public class GlobalExceptionHandler {
         log.error("Unhandled Internal Server Error: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Terjadi kesalahan internal pada server: " + ex.getMessage()));
+    }
+
+    // 8. Spring Security: method-level @PreAuthorize denial fallback
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("Access Denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Anda tidak memiliki akses ke resource ini."));
+    }
+
+    // 9. Spring Security: missing/invalid authentication fallback (di luar filter chain)
+    @ExceptionHandler({ AuthenticationException.class, AuthenticationCredentialsNotFoundException.class })
+    public ResponseEntity<ApiResponse<Void>> handleAuthentication(Exception ex) {
+        log.warn("Authentication Failure: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Autentikasi diperlukan."));
     }
 }

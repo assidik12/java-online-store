@@ -4,8 +4,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
 
-@SpringBootApplication(scanBasePackages = { "controller", "service", "repository", "exception",
-        "toko.online" }, exclude = { R2dbcAutoConfiguration.class })
+@SpringBootApplication(scanBasePackages = {
+        "toko_online",
+        "controller",
+        "service",
+        "repository",
+        "exception"
+}, exclude = { R2dbcAutoConfiguration.class })
 public class TokoOnlineApplication {
 
     public static void main(String[] args) {
