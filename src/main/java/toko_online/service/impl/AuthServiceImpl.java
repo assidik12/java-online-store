@@ -17,20 +17,21 @@ import toko_online.model.dto.response.UserResponse;
 import toko_online.model.entity.User;
 import toko_online.model.enums.Role;
 import toko_online.repository.UserRepository;
+import toko_online.security.JwtService;
 import toko_online.service.AuthService;
-
-import java.util.UUID;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
-    private final UserRepository userRepository;
+    private static final String BEARER_TYPE = "Bearer";
 
-    // Constructor Injection: Spring otomatis menyuntikkan (inject) bean
-    // UserRepository
-    public AuthServiceImpl(UserRepository userRepository) {
+    private final UserRepository userRepository;
+    private final JwtService jwtService;
+
+    public AuthServiceImpl(UserRepository userRepository, JwtService jwtService) {
         this.userRepository = userRepository;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -38,41 +39,33 @@ public class AuthServiceImpl implements AuthService {
         log.info("Menerima permintaan login untuk identifier: {}", request != null ? request.getUserEmail() : "null");
 
         if (request == null) {
-            log.warn("Login gagal: Request data kosong.");
             throw new ValidationException("Data login tidak boleh kosong.");
         }
         if (request.getUserEmail() == null || request.getUserEmail().trim().isEmpty()) {
-            log.warn("Login gagal: Email belum diisi.");
             throw new ValidationException("Email wajib diisi.");
         }
         if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-            log.warn("Login gagal: Password belum diisi.");
             throw new ValidationException("Password wajib diisi.");
         }
 
-        User findUser = userRepository.findByEmail(request.getUserEmail().trim())
+        String identifier = request.getUserEmail().trim();
+        User user = userRepository.findByEmail(identifier)
+                .or(() -> userRepository.findByUsername(identifier))
                 .orElseThrow(() -> {
-                    log.warn("Login gagal: User dengan email '{}' tidak ditemukan.", request.getUserEmail());
+                    log.warn("Login gagal: User '{}' tidak ditemukan.", identifier);
                     return new UnauthorizedException("Email atau password salah.");
                 });
 
         BCrypt.Result result = BCrypt.verifyer().verify(
                 request.getPassword().toCharArray(),
-                findUser.getPassword().toCharArray());
+                user.getPassword().toCharArray());
 
         if (!result.verified) {
-            log.warn("Login gagal: Password tidak cocok untuk user '{}'.", findUser.getUsername());
+            log.warn("Login gagal: Password tidak cocok untuk user '{}'.", user.getUsername());
             throw new UnauthorizedException("Email atau password salah.");
         }
 
-        String token = UUID.randomUUID().toString();
-        log.info("Login berhasil untuk user: {} (ID: {})", findUser.getUsername(), findUser.getId());
-
-        return new LoginResponse(
-                findUser.getId(),
-                findUser.getUsername(),
-                findUser.getEmail(),
-                token);
+        return buildLoginResponse(user);
     }
 
     @Override
@@ -81,32 +74,25 @@ public class AuthServiceImpl implements AuthService {
         log.info("Menerima permintaan registrasi user baru: {}", request != null ? request.getUsername() : "null");
 
         if (request == null) {
-            log.warn("Registrasi gagal: Request data kosong.");
             throw new ValidationException("Data registrasi tidak boleh kosong.");
         }
         if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
-            log.warn("Registrasi gagal: Username belum diisi.");
             throw new ValidationException("Username wajib diisi.");
         }
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-            log.warn("Registrasi gagal: Email belum diisi.");
             throw new ValidationException("Email wajib diisi.");
         }
         if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-            log.warn("Registrasi gagal: Password belum diisi.");
             throw new ValidationException("Password wajib diisi.");
         }
 
         if (userRepository.existsByUsername(request.getUsername().trim())) {
-            log.warn("Registrasi gagal: Username '{}' sudah terdaftar.", request.getUsername());
             throw new ValidationException("Username '" + request.getUsername() + "' sudah terdaftar.");
         }
         if (userRepository.existsByEmail(request.getEmail().trim())) {
-            log.warn("Registrasi gagal: Email '{}' sudah terdaftar.", request.getEmail());
             throw new ValidationException("Email '" + request.getEmail() + "' sudah terdaftar.");
         }
 
-        log.debug("Meng-hash password untuk user: {}", request.getUsername());
         String hashedPassword = BCrypt.withDefaults().hashToString(12, request.getPassword().toCharArray());
 
         User user = new User(
@@ -123,7 +109,6 @@ public class AuthServiceImpl implements AuthService {
             savedUser = userRepository.save(user);
         } catch (DatabaseException e) {
             if (e.getMessage() != null && e.getMessage().contains("Duplicate entry")) {
-                log.warn("Registrasi gagal: Username atau email sudah terdaftar (race condition detected).");
                 throw new ValidationException("Username atau email sudah terdaftar.");
             }
             throw e;
@@ -138,5 +123,34 @@ public class AuthServiceImpl implements AuthService {
                 savedUser.getPhoneNumber(),
                 savedUser.getAddress(),
                 savedUser.getPosCode());
+    }
+
+    @Override
+    public LoginResponse refresh(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new ValidationException("Refresh token wajib diisi.");
+        }
+        if (!jwtService.isTokenValid(refreshToken)) {
+            throw new UnauthorizedException("Refresh token tidak valid atau kadaluarsa.");
+        }
+        Long userId = jwtService.extractUserId(refreshToken);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("User tidak ditemukan."));
+        return buildLoginResponse(user);
+    }
+
+    private LoginResponse buildLoginResponse(User user) {
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
+        log.info("Login berhasil untuk user: {} (ID: {})", user.getUsername(), user.getId());
+        return new LoginResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getRole().name(),
+                accessToken,
+                refreshToken,
+                BEARER_TYPE,
+                jwtService.getAccessTokenExpirationSeconds());
     }
 }
