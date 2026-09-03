@@ -1,5 +1,7 @@
 package toko_online.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
+@Tag(name = "Products", description = "Manajemen produk. GET publik; mutasi butuh role ADMIN.")
 public class ProductController {
 
     private static final Logger log = LoggerFactory.getLogger(ProductController.class);
@@ -49,6 +52,7 @@ public class ProductController {
     }
 
     @PostMapping
+    @Operation(summary = "Buat produk baru (ADMIN)")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest request) {
         log.info("REST Request: POST /api/v1/products dengan nama: {}", request.getName());
         ProductResponse product = productService.createProduct(request);
@@ -57,6 +61,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update produk (ADMIN)")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Integer id,
             @Valid @RequestBody UpdateProductRequest request) {
         log.info("REST Request: PUT /api/v1/products/{}", id);
@@ -65,6 +70,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}/stock")
+    @Operation(summary = "Update stok produk (ADMIN)")
     public ResponseEntity<ApiResponse<Boolean>> updateStock(@PathVariable Integer id, @RequestParam Integer newStock) {
         log.info("REST Request: PATCH /api/v1/products/{}/stock?newStock={}", id, newStock);
         boolean success = productService.updateProductStock(id, newStock);
@@ -72,6 +78,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Hapus produk (ADMIN)")
     public ResponseEntity<ApiResponse<Boolean>> deleteProduct(@PathVariable Integer id) {
         log.info("REST Request: DELETE /api/v1/products/{}", id);
         boolean success = productService.deleteProduct(id);

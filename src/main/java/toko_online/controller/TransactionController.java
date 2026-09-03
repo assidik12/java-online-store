@@ -1,5 +1,7 @@
 package toko_online.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 import org.slf4j.Logger;
@@ -23,6 +25,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/transactions")
+@Tag(name = "Transactions", description = "Pembelian oleh USER/ADMIN, listing ADMIN-only.")
 public class TransactionController {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionController.class);
@@ -34,6 +37,7 @@ public class TransactionController {
     }
 
     @PostMapping
+    @Operation(summary = "Buat transaksi pembelian (USER/ADMIN)")
     public ResponseEntity<ApiResponse<TransactionResponse>> buyProduct(@Valid @RequestBody TransactionRequest request) {
         log.info("REST Request: POST /api/v1/transactions untuk produk ID: {}", request.getProductId());
         TransactionResponse response = transactionService.createTransaction(request);
@@ -42,6 +46,7 @@ public class TransactionController {
     }
 
     @GetMapping
+    @Operation(summary = "List transaksi (ADMIN)")
     public ResponseEntity<ApiResponse<List<TransactionResponse>>> getTransactions(
             @RequestParam(required = false) String email) {
         log.info("REST Request: GET /api/v1/transactions (filter email: '{}')", email != null ? email : "SEMUA");
@@ -50,6 +55,7 @@ public class TransactionController {
     }
 
     @GetMapping("/details")
+    @Operation(summary = "List detail transaksi (ADMIN)")
     public ResponseEntity<ApiResponse<List<TransactionDetailResponse>>> getTransactionDetails(
             @RequestParam(required = false) String email) {
         log.info("REST Request: GET /api/v1/transactions/details (filter email: '{}')", email);
