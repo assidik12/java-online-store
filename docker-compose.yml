@@ -1,0 +1,131 @@
+# ===================================================================
+# RetailFlow — Production docker-compose
+# Stack: MySQL 8.0 (persistent) + RetailFlow app (JVM)
+# ===================================================================
+# Usage:
+#   docker compose up -d                    # start
+#   docker compose down                     # stop
+#   docker compose down -v                  # stop + drop MySQL volume
+#   docker compose logs -f app              # tail app logs
+#   docker compose exec mysql mysql -uroot -p
+# ===================================================================
+
+services:
+  # ---------- MySQL 8.0 ----------
+  mysql:
+    image: mysql:8.0
+    container_name: retailflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass_change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-java_toko_online}
+      MYSQL_USER: ${MYSQL_USER:-retailflow}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-retailflow_change_me}
+      TZ: Asia/Jakarta
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+07:00
+      - --max-connections=200
+      - --innodb-buffer-pool-size=512M
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Init scripts jalan sekali saat container pertama start (jika data dir kosong)
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - retailflow-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-rootpass_change_me}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ---------- RetailFlow App ----------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: retailflow/toko-online:1.0.0
+    container_name: retailflow-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # --- Datasource ---
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-java_toko_online}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Jakarta&useUnicode=true&characterEncoding=utf8
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-retailflow}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-retailflow_change_me}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      # --- HikariCP ---
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 20
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 5
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      # --- Flyway ---
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration,classpath:db/seed
+      # --- JWT (WAJIB di-override di production!) ---
+      APP_JWT_SECRET: "${APP_JWT_SECRET:?APP_JWT_SECRET wajib di-set (gunakan: openssl rand -base64 48)}"
+      APP_JWT_ACCESS_TOKEN_EXPIRATION_MS: 3600000
+      APP_JWT_REFRESH_TOKEN_EXPIRATION_MS: 604800000
+      APP_JWT_ISSUER: retailflow
+      # --- Server & Jackson ---
+      SERVER_PORT: 8080
+      SPRING_JACKSON_TIME_ZONE: Asia/Jakarta
+      # --- Logging ---
+      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_TOKO_ONLINE: INFO
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: INFO
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    networks:
+      - retailflow-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:8080/actuator/health 2>/dev/null || curl -fsS http://localhost:8080/api/v1/products 2>/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.5"
+        reservations:
+          memory: 384M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+# ---------- Networks ----------
+networks:
+  retailflow-net:
+    driver: bridge
+    name: retailflow-net
+
+# ---------- Volumes ----------
+volumes:
+  mysql_data:
+    name: retailflow-mysql-data
+    driver: local
