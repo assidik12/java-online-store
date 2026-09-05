@@ -2,9 +2,9 @@
 
 # 🏪 RetailFlow
 
-**Enterprise-Grade RESTful API for Online Store & Point of Sales — Java 17, Spring Boot 3, Clean Architecture, RBAC + JWT**
+**Enterprise-Grade RESTful API for Online Store & Point of Sales — Java 25, Spring Boot 3, Clean Architecture, RBAC + JWT**
 
-[![Java](https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Java](https://img.shields.io/badge/Java-25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Build-Maven-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 [![MySQL](https://img.shields.io/badge/Database-MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
@@ -12,6 +12,7 @@
 [![Flyway](https://img.shields.io/badge/Migration-Flyway-CC0200?style=for-the-badge)](https://flywaydb.org/)
 [![HikariCP](https://img.shields.io/badge/Pool-HikariCP-4CAF50?style=for-the-badge)](https://github.com/brettwooldridge/HikariCP)
 [![OpenAPI](https://img.shields.io/badge/Docs-OpenAPI%203-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://springdoc.org/)
+[![Tests](https://img.shields.io/badge/Tests-59%20passing-success?style=for-the-badge&logo=junit5&logoColor=white)](#-testing)
 [![Architecture](https://img.shields.io/badge/Design-Clean%20Architecture-00599C?style=for-the-badge)](#-arsitektur-sistem)
 
 </div>
@@ -24,7 +25,7 @@
 
 Sistem menyediakan endpoint untuk registrasi & login (JWT), katalog produk, transaksi pembelian, serta kontrol akses berbasis peran (**USER** & **ADMIN**). Dokumentasi API tersedia secara interaktif melalui **Swagger UI** (OpenAPI 3).
 
-Arsitektur berlapis dengan **Interface Abstraction** memisahkan Presentation (Controller), Business Logic (Service), dan Data Access (Repository) — sehingga *testable*, *maintainable*, dan siap *scale* secara horizontal.
+Arsitektur berlapis dengan **Interface Abstraction** memisahkan Presentation (Controller), Business Logic (Service), dan Data Access (Repository) — sehingga _testable_, _maintainable_, dan siap _scale_ secara horizontal.
 
 ---
 
@@ -69,35 +70,37 @@ graph TD
    - `MethodArgumentNotValidException`, custom `AppException` family, Spring Security `AccessDenied` & `AuthenticationException` — semua response JSON konsisten lewat `ApiResponse<T>`.
 9. **DTO Pattern + Validation**
    - Jakarta Bean Validation (`@NotBlank`, `@Email`, `@Size`) di request DTO, dan trim/sanitasi di service.
+10. **TokenProvider Abstraction (DIP)**
+    - `JwtService` di-extract ke interface `TokenProvider` — `AuthServiceImpl` & `JwtAuthenticationFilter` depend pada abstraksi, sehingga 100% mockable di unit test (tanpa Bytecode enhancement) dan siap di-swap ke JWT provider lain (RS256, Keycloak) tanpa ubah business logic.
 
 ---
 
 ## 🔐 Model Keamanan (Security Model)
 
-| Aspek | Implementasi |
-| :--- | :--- |
-| Autentikasi | JWT (HS256) — `Authorization: Bearer <token>` |
-| Password Storage | BCrypt (strength 12) |
-| Session | Stateless (tidak ada HttpSession) |
-| CSRF | Disabled (karena stateless + JWT) |
-| Authorization | URL-based (`SecurityFilterChain`) + method-based (`@PreAuthorize`) |
-| Token Claims | `sub=userId`, `iss=app`, `jti`, `iat`, `exp`, `role`, `username`, `email` |
-| Refresh Token | Stateless; rotation via `POST /api/v1/auth/refresh` |
-| Error Response | JSON `ApiResponse{success, message, data}` — 401/403 terstandarisasi |
+| Aspek            | Implementasi                                                              |
+| :--------------- | :------------------------------------------------------------------------ |
+| Autentikasi      | JWT (HS256) — `Authorization: Bearer <token>`                             |
+| Password Storage | BCrypt (strength 12)                                                      |
+| Session          | Stateless (tidak ada HttpSession)                                         |
+| CSRF             | Disabled (karena stateless + JWT)                                         |
+| Authorization    | URL-based (`SecurityFilterChain`) + method-based (`@PreAuthorize`)        |
+| Token Claims     | `sub=userId`, `iss=app`, `jti`, `iat`, `exp`, `role`, `username`, `email` |
+| Refresh Token    | Stateless; rotation via `POST /api/v1/auth/refresh`                       |
+| Error Response   | JSON `ApiResponse{success, message, data}` — 401/403 terstandarisasi      |
 
 **Role Matrix:**
 
-| Endpoint | USER | ADMIN | Public |
-| :--- | :---: | :---: | :---: |
-| `POST /api/v1/auth/register` | — | — | ✅ |
-| `POST /api/v1/auth/login` | — | — | ✅ |
-| `POST /api/v1/auth/refresh` | ✅ | ✅ | — |
-| `GET /api/v1/products/**` | ✅ | ✅ | ✅ |
-| `POST/PUT/PATCH/DELETE /api/v1/products/**` | ❌ | ✅ | ❌ |
-| `POST /api/v1/transactions` | ✅ | ✅ | ❌ |
-| `GET /api/v1/transactions`, `/details` | ❌ | ✅ | ❌ |
-| `GET /api/v1/users/me` | ✅ | ✅ | ❌ |
-| `GET /api/v1/users` | ❌ | ✅ | ❌ |
+| Endpoint                                    | USER | ADMIN | Public |
+| :------------------------------------------ | :--: | :---: | :----: |
+| `POST /api/v1/auth/register`                |  —   |   —   |   ✅   |
+| `POST /api/v1/auth/login`                   |  —   |   —   |   ✅   |
+| `POST /api/v1/auth/refresh`                 |  ✅  |  ✅   |   —    |
+| `GET /api/v1/products/**`                   |  ✅  |  ✅   |   ✅   |
+| `POST/PUT/PATCH/DELETE /api/v1/products/**` |  ❌  |  ✅   |   ❌   |
+| `POST /api/v1/transactions`                 |  ✅  |  ✅   |   ❌   |
+| `GET /api/v1/transactions`, `/details`      |  ❌  |  ✅   |   ❌   |
+| `GET /api/v1/users/me`                      |  ✅  |  ✅   |   ❌   |
+| `GET /api/v1/users`                         |  ❌  |  ✅   |   ❌   |
 
 ---
 
@@ -251,33 +254,40 @@ CREATE TABLE `transactions_details` (
 
 ## 🛠️ Teknologi & Library
 
-| Komponen | Teknologi / Library | Versi | Deskripsi |
-| :--- | :--- | :--- | :--- |
-| **Language** | Java JDK | 17 LTS | Bahasa pemrograman inti |
-| **Framework** | Spring Boot | 3.3.2 | Web, Validation, JDBC, Security |
-| **Build Tool** | Apache Maven | 3.x | Dependency & build lifecycle |
-| **Database** | MySQL | 8.0+ | RDBMS |
-| **Migration** | Flyway (core + mysql) | bundled | Versioned SQL schema |
-| **Connection Pool** | HikariCP | bundled (Spring Boot) | High-perf JDBC pool |
-| **Driver JDBC** | MySQL Connector/J | 8.x | JDBC driver |
-| **Security** | Spring Security | 6.x | Auth & RBAC |
-| **JWT** | jjwt (api, impl, jackson) | 0.12.6 | HS256 token generation |
-| **Password** | BCrypt (Favre-lib) | 0.10.2 | Adaptive password hashing |
-| **OpenAPI** | springdoc-openapi-starter-webmvc-ui | 2.6.0 | Swagger UI / OpenAPI 3 |
-| **JSON** | Jackson | bundled | Serialization DTO ↔ JSON |
-| **Logging** | SLF4J + Logback | bundled | Structured logging |
-| **Testing** | Spring Boot Test | bundled | Unit & integration test |
+| Komponen            | Teknologi / Library                 | Versi                 | Deskripsi                          |
+| :------------------ | :---------------------------------- | :-------------------- | :--------------------------------- |
+| **Language**        | Java JDK                            | 17 LTS                | Bahasa pemrograman inti            |
+| **Framework**       | Spring Boot                         | 3.3.2                 | Web, Validation, JDBC, Security    |
+| **Build Tool**      | Apache Maven                        | 3.x                   | Dependency & build lifecycle       |
+| **Database**        | MySQL                               | 8.0+                  | RDBMS                              |
+| **Migration**       | Flyway (core + mysql)               | bundled               | Versioned SQL schema               |
+| **Connection Pool** | HikariCP                            | bundled (Spring Boot) | High-perf JDBC pool                |
+| **Driver JDBC**     | MySQL Connector/J                   | 8.x                   | JDBC driver                        |
+| **Security**        | Spring Security                     | 6.x                   | Auth & RBAC                        |
+| **JWT**             | jjwt (api, impl, jackson)           | 0.12.6                | HS256 token generation             |
+| **Password**        | BCrypt (Favre-lib)                  | 0.10.2                | Adaptive password hashing          |
+| **OpenAPI**         | springdoc-openapi-starter-webmvc-ui | 2.6.0                 | Swagger UI / OpenAPI 3             |
+| **JSON**            | Jackson                             | bundled               | Serialization DTO ↔ JSON           |
+| **Logging**         | SLF4J + Logback                     | bundled               | Structured logging                 |
+| **Testing**         | JUnit 5 + Mockito + AssertJ         | bundled               | Unit + slice framework             |
+| **Testing Slice**   | Spring Boot Test + MockMvc          | bundled               | `@WebMvcTest`, `@JdbcTest`         |
+| **Testing E2E**     | Testcontainers MySQL                | 1.20.x                | Real DB untuk `*IT` (perlu Docker) |
+| **Security Test**   | spring-security-test                | bundled               | `@WithMockUser` helper             |
+| **Coverage**        | JaCoCo                              | bundled               | `target/site/jacoco/index.html`    |
 
 ---
 
 ## 🚀 Panduan Menjalankan (Getting Started)
 
 ### 1. Prasyarat
-- [JDK 17+](https://adoptium.net/)
-- [MySQL 8+](https://dev.mysql.com/downloads/) (atau XAMPP/MariaDB)
-- [Maven 3.x](https://maven.apache.org/)
+
+- [JDK 25](https://adoptium.net/) (tested with Byte Buddy compatibility flag)
+- [MySQL 8+](https://dev.mysql.com/downloads/) (atau XAMPP/MariaDB) untuk runtime
+- [Maven 3.9](https://maven.apache.org/)
+- [Docker](https://www.docker.com/) (opsional — hanya untuk E2E & concurrency test)
 
 ### 2. Konfigurasi Database
+
 Pastikan MySQL berjalan dan buat database (opsional — Flyway akan membuat otomatis):
 
 ```sql
@@ -294,6 +304,7 @@ spring.datasource.password=
 ```
 
 ### 3. Konfigurasi JWT (Production)
+
 Ganti `app.jwt.secret` dengan base64 string minimal 256-bit. **Jangan commit secret production ke git** — gunakan env variable:
 
 ```bash
@@ -317,10 +328,10 @@ Server berjalan di `http://localhost:8080`.
 
 ### 5. Akses Dokumentasi API
 
-| URL | Deskripsi |
-| :--- | :--- |
+| URL                                     | Deskripsi               |
+| :-------------------------------------- | :---------------------- |
 | `http://localhost:8080/swagger-ui.html` | Swagger UI (interaktif) |
-| `http://localhost:8080/api/docs` | OpenAPI 3 JSON spec |
+| `http://localhost:8080/api/docs`        | OpenAPI 3 JSON spec     |
 
 Klik **Authorize** 🔓 di Swagger UI, paste `accessToken` dari response `POST /api/v1/auth/login`, lalu coba seluruh endpoint.
 
@@ -329,6 +340,7 @@ Klik **Authorize** 🔓 di Swagger UI, paste `accessToken` dari response `POST /
 ## 📡 Contoh Penggunaan API (Quick Start)
 
 ### 1. Register
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -343,6 +355,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 ```
 
 ### 2. Login → dapat JWT
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -351,7 +364,9 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
     "password": "Secret123!"
   }'
 ```
+
 Response:
+
 ```json
 {
   "success": true,
@@ -370,12 +385,14 @@ Response:
 ```
 
 ### 3. Akses endpoint protected
+
 ```bash
 curl -X GET http://localhost:8080/api/v1/users/me \
   -H "Authorization: Bearer <accessToken>"
 ```
 
 ### 4. Buat transaksi
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/transactions \
   -H "Authorization: Bearer <accessToken>" \
@@ -388,6 +405,7 @@ curl -X POST http://localhost:8080/api/v1/transactions \
 ```
 
 ### 5. Refresh token
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/refresh \
   -H "Authorization: Bearer <refreshToken>"
@@ -407,20 +425,104 @@ curl -X POST http://localhost:8080/api/v1/auth/refresh \
 - 📜 **OpenAPI 3 Docs** — Swagger UI interaktif dengan tombol "Authorize".
 - 🚨 **Centralized Error Handling** — JSON konsisten untuk semua error.
 - 🗃️ **Flyway Migration** — schema versioned + repeatable seed.
+- 🧪 **Test Suite 59 Tests** — Unit + Slice + E2E + Concurrency (lihat § Testing).
 
 ---
 
-## 🧪 Testing (Roadmap)
+## 🧪 Testing
 
-```bash
-mvn test
+RetailFlow menerapkan **Test Pyramid penuh** dengan **59 test** (semua passing) yang menjamin kebenaran unit, integrasi, RBAC enforcement, dan atomicity transaksi.
+
+### Arsitektur Test
+
+```
+src/test/java/toko_online/
+├── support/                                # Shared Test Infrastructure
+│   ├── MySqlTestcontainerExtension.java    # JUnit 5 ext, static MySQLContainer 8.0
+│   ├── TestDataFactory.java                # Builder untuk User, Product, Transaction, DTO
+│   └── JwtTestTokens.java                  # Helper mint JWT untuk test
+│
+├── unit/                                   # Pure Unit (Mockito, no Spring context)
+│   ├── service/                            # 31 test — service logic dgn mocked repo
+│   │   ├── AuthServiceImplTest.java        # 12 cases
+│   │   ├── ProductServiceImplTest.java     # 12 cases
+│   │   └── TransactionServiceImplTest.java #  7 cases
+│   ├── security/                           # 11 test — JWT + filter + UserDetailsService
+│   └── exception/                          #  1 test — exception hierarchy smoke
+│
+├── slice/                                  # Isolated Layer Context
+│   ├── controller/                         # 14 test — @WebMvcTest + MockMvc
+│   │   ├── AuthControllerWebTest.java      #  5 cases
+│   │   ├── ProductControllerWebTest.java   #  5 cases
+│   │   ├── TransactionControllerWebTest.java # 3 cases
+│   │   └── UserControllerWebTest.java      #  1 case
+│   └── repository/                         # @JdbcTest + Testcontainers (Docker)
+│
+└── e2e/                                    # 12 test — Full Spring Boot, HTTP real, JWT real
+    ├── AuthFlowIT.java                     # register → login → /users/me → refresh
+    ├── ProductFlowIT.java                  # Admin CRUD + public read lifecycle
+    ├── TransactionFlowIT.java              # purchase + inventory deduction
+    ├── RbacEnforcementIT.java              # 401/403 matrix
+    ├── GlobalExceptionHandlerIT.java       # standardized error payload
+    └── TransactionConcurrencyIT.java       # 20 thread concurrent buy, no oversell
 ```
 
-Rekomendasi struktur:
-- `service/` — unit test dengan Mockito (mock repository).
-- `controller/` — `@WebMvcTest` + `MockMvc` + JWT test utility.
-- `repository/` — `@JdbcTest` dengan H2/Testcontainers MySQL.
-- `integration/` — `@SpringBootTest` end-to-end flow.
+### Cara Menjalankan
+
+```bash
+# Unit + Slice (no Docker required, < 30 detik)
+mvn test
+
+# Unit + Slice + E2E + Concurrency (perlu Docker)
+mvn verify
+```
+
+### Stack Test
+
+| Tool                 | Versi   | Peran                                   |
+| :------------------- | :------ | :-------------------------------------- |
+| JUnit 5              | bundled | Test runner                             |
+| Mockito              | bundled | Mocking dependencies                    |
+| AssertJ              | bundled | Fluent assertions                       |
+| Spring Security Test | bundled | `@WithMockUser`, JWT helpers            |
+| Testcontainers MySQL | 1.20.x  | Real DB untuk `*IT` (Docker)            |
+| MockMvc              | bundled | Slice test HTTP                         |
+| TestRestTemplate     | bundled | E2E HTTP                                |
+| JaCoCo               | bundled | Coverage report (`target/site/jacoco/`) |
+
+### Highlight: Concurrency Test
+
+`TransactionConcurrencyIT` mensimulasikan **20 thread concurrent** membeli produk dengan stok = 10. Test memvalidasi `SELECT ... FOR UPDATE` + `@Transactional` mencegah race condition:
+
+```
+Given  product.stock = 10
+When   20 threads concurrently buy qty=1
+Then   success = 10
+       And   conflict (InsufficientStockException) = 10
+       And   final product.stock = 0
+       And   no oversell, no negative stock
+```
+
+### Highlight: TokenProvider Abstraction
+
+Untuk 100% mockability di unit test, `JwtService` di-extract ke interface `TokenProvider`. `AuthServiceImpl` dan `JwtAuthenticationFilter` depend pada abstraksi (DIP), sehingga bisa di-mock tanpa Bytecode enhancement.
+
+### Build Configuration
+
+`pom.xml` di-configure untuk **Java 25 + Byte Buddy compatibility**:
+
+- `maven-surefire-plugin` → `**/*Test.java` (Unit + WebMvc slice)
+- `maven-failsafe-plugin` → `**/*IT.java` (E2E + Concurrency, butuh Docker)
+- JVM args: `-XX:+EnableDynamicAgentLoading -Dnet.bytebuddy.experimental=true`
+
+### Test Result (Last Run)
+
+```
+[INFO] Tests run: 59, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+Detail lengkap: lihat [walkthrough.md](walkthrough.md).
 
 ---
 
@@ -444,7 +546,8 @@ Proyek ini menggunakan lisensi **Proprietary** — lihat `LICENSE` untuk detail.
 ## 👤 Pengembang
 
 - **Repository**: [RetailFlow](https://github.com/assidik12/java-online-store)
-- **Fokus**: *Clean Architecture, Domain-Driven Design, Enterprise Java, Secure Coding Best Practices, RESTful API Design.*
+- **Fokus**: _Clean Architecture, Domain-Driven Design, Enterprise Java, Secure Coding Best Practices, RESTful API Design._
+- **Detail implementasi test suite**: [walkthrough.md](walkthrough.md)
 
 ---
 

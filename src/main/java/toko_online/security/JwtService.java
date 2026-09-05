@@ -20,7 +20,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 @Component
-public class JwtService {
+public class JwtService implements TokenProvider {
 
     private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 

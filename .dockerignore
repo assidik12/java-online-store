@@ -1,0 +1,61 @@
+# RetailFlow — Docker build context exclusions
+# Memperkecil build context dan menghindari cache busting dari file yang tidak relevan
+
+# Build artifacts
+target/
+*.jar
+*.war
+*.class
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Test artifacts & coverage
+test-output/
+test-results/
+jacoco/
+coverage/
+*.lcov
+htmlcov/
+.pytest_cache/
+
+# Local environment & secrets
+.env
+.env.local
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Docs (tidak dibutuhkan di image)
+README.md
+walkthrough.md
+docs/
+LICENSE
+
+# Docker artifacts (hindari recursive)
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml

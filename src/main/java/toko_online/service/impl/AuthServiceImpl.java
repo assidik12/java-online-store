@@ -18,6 +18,7 @@ import toko_online.model.entity.User;
 import toko_online.model.enums.Role;
 import toko_online.repository.UserRepository;
 import toko_online.security.JwtService;
+import toko_online.security.TokenProvider;
 import toko_online.service.AuthService;
 
 @Service
@@ -27,9 +28,9 @@ public class AuthServiceImpl implements AuthService {
     private static final String BEARER_TYPE = "Bearer";
 
     private final UserRepository userRepository;
-    private final JwtService jwtService;
+    private final TokenProvider jwtService;
 
-    public AuthServiceImpl(UserRepository userRepository, JwtService jwtService) {
+    public AuthServiceImpl(UserRepository userRepository, TokenProvider jwtService) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
     }
